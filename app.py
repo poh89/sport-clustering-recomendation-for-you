@@ -18,7 +18,31 @@ STATIC_DATA = {
     'Flexibility': [3, 8, 10, 5, 7, 6, 3, 2],
     'Strength': [4, 6, 5, 6, 4, 8, 5, 10]
 }
-
+@st.cache_data(ttl=1)
+def load_data(use_google=True):
+    # ข้อมูลสำรองกันเหนียว
+    fallback_df = pd.DataFrame(STATIC_DATA)
+    
+    if not use_google:
+        return fallback_df
+        
+    try:
+        df = pd.read_csv(SHEET_URL)
+        # ตรวจสอบว่ามีข้อมูลอย่างน้อย 1 แถว และ 7 คอลัมน์ไหม
+        if df.empty or len(df.columns) < 7:
+            return fallback_df
+            
+        # เลือกเอาเฉพาะคอลัมน์ที่ต้องการ (คอลัมน์ 2 ถึง 7)
+        df = df.iloc[:, 1:7].dropna()
+        df.columns = ['Sport', 'Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']
+        
+        # แปลงเป็นตัวเลข ถ้าแปลงไม่ได้ให้เป็น 5 (ค่ากลาง)
+        for col in ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(5)
+            
+        return df
+    except:
+        return fallback_df
 # --- [LOGIC FUNCTIONS] ---
 @st.cache_data(ttl=1)
 def load_data(use_google=True):
