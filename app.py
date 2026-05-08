@@ -3,109 +3,72 @@ import pandas as pd
 import numpy as np
 import os
 from datetime import datetime
-from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 
-# --- 1. ข้อมูลกีฬา ---
-@st.cache_data
-def load_sports_data():
-    data = {
-        'Sport': ['วิ่ง (Running)', 'ว่ายน้ำ (Swimming)', 'โยคะ (Yoga)', 'ฟุตบอล (Football)', 
-                  'แบดมินตัน (Badminton)', 'มวยสากล (Boxing)', 'ปั่นจักรยาน (Cycling)', 'ยกน้ำหนัก (Weightlifting)'],
-        'Icon': ['🏃‍♂️', '🏊‍♂️', '🧘‍♀️', '⚽', '🏸', '🥊', '🚴‍♂️', '💪'],
-        'Intensity': [8, 7, 3, 9, 7, 10, 6, 8], 
-        'Social': [1, 1, 2, 10, 8, 2, 4, 1],    
-        'Budget': [2, 4, 3, 3, 5, 4, 8, 5],     
-        'Flexibility': [3, 8, 10, 5, 7, 6, 3, 2], 
-        'Strength': [4, 6, 5, 6, 4, 8, 5, 10]   
-    }
-    return pd.DataFrame(data)
+# --- 1. เชื่อมต่อ Google Sheet ---
+# นำลิงก์ที่ก๊อปมาจาก Google Sheet (ที่ลงท้ายด้วย output=csv) มาวางในเครื่องหมายคำพูดด้านล่างนี้
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-CWhytgN4VrGjp82zbtzbjTrw0HtIqcUtOUuyt8HVwiJbwB9_gRBPt5MRlGUe6AGILR9W2-y8_Inf/pub?output=csv" 
 
-df = load_sports_data()
+@st.cache_data(ttl=1) # ตั้งค่าให้ดึงข้อมูลใหม่ทันทีที่รีเฟรช
+def load_data():
+    try:
+        df_sheet = pd.read_csv(SHEET_URL)
+        # ตั้งชื่อคอลัมน์ให้ตรงกับที่ AI ต้องการ (เรียงตามลำดับใน Sheet)
+        df_sheet.columns = ['Timestamp', 'Sport', 'Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']
+        return df_sheet
+    except Exception as e:
+        st.error(f"⚠️ ไม่สามารถดึงข้อมูลได้: {e}")
+        return pd.DataFrame()
+
+df = load_data()
 features = ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']
-X = df[features]
 
-# --- 2. ทำ Clustering ---
-kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-df['Cluster'] = kmeans.fit_predict(X)
-cluster_map = {0: 'สายชิล/ยืดหยุ่น', 1: 'สายพลัง/สร้างกล้ามเนื้อ', 2: 'สายคาร์ดิโอ/สังคม'}
-df['Category'] = df['Cluster'].map(cluster_map)
-
-# --- 3. หน้าเว็บ ---
-st.set_page_config(page_title="Sport AI Recommendation", layout="wide", page_icon="🎯")
-
-st.markdown("<h1 style='text-align: center; color: #4F8BF9;'>🎯 ค้นหากีฬาที่ใช่... ในสไตล์คุณ!</h1>", unsafe_allow_html=True)
+# --- 2. ตั้งค่าหน้าเว็บ ---
+st.set_page_config(page_title="SportMatch AI", layout="wide")
+st.title("🏆 SportMatch AI: ค้นหากีฬาจากฐานข้อมูลจริง")
 st.markdown("---")
 
-st.header("👤 ข้อมูลพื้นฐาน")
-cp1, cp2 = st.columns(2)
-with cp1:
-    user_gender = st.selectbox("🚻 เพศของคุณ", ["ชาย (Male)", "หญิง (Female)", "อื่นๆ (Other)"])
-with cp2:
-    user_age = st.number_input("🎂 อายุของคุณ", min_value=1, max_value=100, value=20)
+# เลือกโหมด (2 Cases ตามที่คุณต้องการ)
+mode = st.sidebar.selectbox("🎯 คุณคือใคร?", ["มือใหม่ (Newbie)", "นักกีฬา (อยากลองกีฬาใหม่)"])
 
-st.header("📝 คุณชอบออกกำลังกายแบบไหน? (คะแนน 1-10)")
-col1, col2 = st.columns(2)
-with col1:
-    u_intensity = st.slider("🏃‍♂️ ชอบความเหนื่อย/คาร์ดิโอแค่ไหน?", 1, 10, 5)
-    u_budget = st.slider("💰 งบประมาณอุปกรณ์?", 1, 10, 5)
-    u_strength = st.slider("💪 เน้นพละกำลังกล้ามเนื้อไหม?", 1, 10, 5)
-with col2:
-    u_social = st.slider("👥 ชอบเข้าสังคม/เล่นเป็นทีมแค่ไหน?", 1, 10, 5)
-    u_flexibility = st.slider("🤸‍♀️ เน้นความยืดหยุ่นร่างกายไหม?", 1, 10, 5)
+if not df.empty:
+    if mode == "มือใหม่ (Newbie)":
+        st.header("🌟 แนะนำกีฬาเริ่มต้นสำหรับคุณ")
+        col1, col2 = st.columns(2)
+        with col1:
+            u_intensity = st.slider("ระดับความเหนื่อยที่รับได้", 1, 10, 5)
+            u_social = st.slider("ความชอบเข้าสังคม", 1, 10, 5)
+        with col2:
+            u_budget = st.slider("งบประมาณอุปกรณ์", 1, 10, 5)
+            u_flex = st.slider("ความยืดหยุ่นร่างกาย", 1, 10, 5)
 
-user_profile = np.array([[u_intensity, u_social, u_budget, u_flexibility, u_strength]])
-
-if st.button("✨ วิเคราะห์กีฬาที่เหมาะกับฉัน!", use_container_width=True):
-    sim_scores = cosine_similarity(user_profile, X)
-    df['Match_Score'] = sim_scores[0]
-    recs = df.sort_values(by='Match_Score', ascending=False).head(3)
-    
-    file_name = 'user_responses.csv'
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    new_data = pd.DataFrame({
-        'Timestamp': [ts], 'Gender': [user_gender], 'Age': [user_age],
-        'Intensity': [u_intensity], 'Social': [u_social], 'Budget': [u_budget],
-        'Flexibility': [u_flexibility], 'Strength': [u_strength],
-        'Result': [recs.iloc[0]['Sport']]
-    })
-    
-    if not os.path.isfile(file_name):
-        new_data.to_csv(file_name, index=False, encoding='utf-8-sig')
-    else:
-        new_data.to_csv(file_name, mode='a', header=False, index=False, encoding='utf-8-sig')
-    
-    st.success("🎉 วิเคราะห์เสร็จสิ้น!")
-    res_cols = st.columns(3)
-    for (i, row), col in zip(recs.iterrows(), res_cols):
-        with col:
-            st.markdown(f"""
-                <div style='background-color: #f0f2f6; border-radius: 10px; padding: 20px; text-align: center;'>
-                    <h1>{row['Icon']}</h1>
-                    <h3>{row['Sport']}</h3>
-                    <h2 style='color: #4F8BF9;'>{round(row['Match_Score']*100, 1)}%</h2>
-                </div>
-            """, unsafe_allow_html=True)
-
-# --- ส่วนที่แก้ไขปัญหา Error ---
-st.markdown("---")
-with st.expander("🔐 ระบบจัดการหลังบ้าน (Admin Only)"):
-    file_path = 'user_responses.csv'
-    if os.path.isfile(file_path):
-        try:
-            # พยายามอ่านไฟล์
-            saved_df = pd.read_csv(file_path)
-            st.write(f"📊 มีผู้ใช้งานระบบแล้ว: **{len(saved_df)}** คน")
-            st.dataframe(saved_df, use_container_width=True)
+        if st.button("✨ วิเคราะห์ผล"):
+            user_vector = np.array([[u_intensity, u_social, u_budget, u_flex, 5]])
+            sim = cosine_similarity(user_vector, df[features])
+            df['Score'] = sim[0]
+            res = df.sort_values(by='Score', ascending=False).head(3)
             
-            if st.button("🗑️ ล้างข้อมูลทั้งหมด"):
-                os.remove(file_path)
-                st.rerun()
-        except Exception as e:
-            # ถ้าอ่านไฟล์ไม่ได้ (เพราะโครงสร้างไฟล์เก่าขัดกับโค้ดใหม่)
-            st.error("⚠️ ตรวจพบไฟล์ข้อมูลรุ่นเก่าที่ไม่รองรับ หรือไฟล์เสียหาย")
-            if st.button("🚨 ลบไฟล์ที่เสียและเริ่มใหม่ (Fix Error)"):
-                os.remove(file_path)
-                st.rerun()
+            st.success("กีฬาที่แนะนำ:")
+            for i, row in res.iterrows():
+                st.write(f"### 🥇 {row['Sport']} (ความเหมาะสม {round(row['Score']*100, 1)}%)")
+
     else:
-        st.info("ยังไม่มีข้อมูลในระบบ")
+        st.header("🔄 ต่อยอดทักษะจากกีฬาเดิม")
+        current_sport = st.selectbox("ตอนนี้เล่นกีฬาอะไรอยู่?", df['Sport'].unique())
+        
+        if st.button("🚀 หากีฬาใหม่ที่ใช้ทักษะคล้ายกัน"):
+            target = df[df['Sport'] == current_sport][features].values
+            others = df[df['Sport'] != current_sport].copy()
+            sim = cosine_similarity(target, others[features])
+            others['Score'] = sim[0]
+            res = others.sort_values(by='Score', ascending=False).head(3)
+            
+            st.info(f"คุณน่าจะชอบกีฬาเหล่านี้เช่นกัน:")
+            for i, row in res.iterrows():
+                st.write(f"### 🔥 {row['Sport']} (ความคล้ายคลึง {round(row['Score']*100, 1)}%)")
+
+    # ส่วน Admin ดูข้อมูล
+    with st.expander("📊 ฐานข้อมูลกีฬาปัจจุบัน"):
+        st.dataframe(df)
+else:
+    st.warning("กรุณาใส่ลิงก์ SHEET_URL ให้ถูกต้องเพื่อให้ระบบทำงานได้")
