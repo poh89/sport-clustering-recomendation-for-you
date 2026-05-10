@@ -30,36 +30,43 @@ def load_data(use_google=True):
         return df
     except: return pd.DataFrame(STATIC_DATA)
 
-# --- 💡 ฟังก์ชันวิเคราะห์เหตุผลแบบเจาะลึก (Deep Analysis) ---
-def get_detailed_reason(row, user_req):
-    reasons = []
-    # วิเคราะห์ทีละปัจจัยหลัก
-    if row['Intensity'] >= 7 and user_req[0] >= 7:
-        reasons.append(f"กีฬานี้มีค่าความเหนื่อยระดับ {row['Intensity']} ซึ่งจะช่วยกระตุ้นการทำงานของหัวใจและหลอดเลือด (Cardiovascular) ได้อย่างดีเยี่ยม ตรงตามที่คุณต้องการเน้นการเบิร์นแคลอรี่")
+# --- 💡 ฟังก์ชัน AI วิเคราะห์เจาะลึกตาม Slider ของผู้ใช้ ---
+def get_advanced_reason(row, user_req):
+    analysis = []
     
-    if row['Social'] >= 7 and user_req[1] >= 7:
-        reasons.append(f"ด้วยระดับการเข้าสังคมที่สูงถึง {row['Social']} กีฬานี้จะช่วยให้คุณได้พบปะผู้คนและสร้างมิตรภาพผ่านการทำงานเป็นทีม ซึ่งจะทำให้คุณสนุกกับการออกกำลังกายได้นานขึ้น")
-        
-    if row['Budget'] <= 4 and user_req[2] <= 4:
-        reasons.append(f"ในด้านความคุ้มค่า กีฬานี้มีค่าใช้จ่ายอุปกรณ์ที่ต่ำ (ระดับ {row['Budget']}) ทำให้คุณสามารถเริ่มต้นได้ทันทีโดยไม่มีภาระด้านงบประมาณที่สูงเกินไป")
-    
-    if row['Flexibility'] >= 7 and user_req[3] >= 7:
-        reasons.append(f"คุณจะได้พัฒนาความยืดหยุ่นของเส้นเอ็นและกล้ามเนื้อ ซึ่งช่วยลดโอกาสการบาดเจ็บในชีวิตประจำวันและเพิ่มบุคลิกภาพที่ดี")
-        
-    if row['Strength'] >= 7 and user_req[4] >= 7:
-        reasons.append(f"เน้นการใช้มวลกล้ามเนื้อหลักเพื่อสร้างพละกำลัง (Core Strength) ซึ่งจะช่วยเพิ่มอัตราการเผาผลาญพื้นฐานของร่างกายคุณให้ดีขึ้นในระยะยาว")
+    # 1. วิเคราะห์ Cardio
+    if user_req[0] >= 7:
+        analysis.append(f"เนื่องจากคุณเน้นความเหนื่อยระดับสูง ({user_req[0]}/10) กีฬา {row['Sport']} ที่มีค่า Intensity อยู่ที่ {row['Intensity']} จึงเป็นตัวเลือกที่ยอดเยี่ยมในการเสริมสร้างความอึดของกล้ามเนื้อหัวใจ")
+    elif user_req[0] <= 3:
+        analysis.append(f"จากการที่คุณเลือกความเหนื่อยในระดับต่ำ ({user_req[0]}/10) เราจึงแนะนำ {row['Sport']} ซึ่งเน้นการเคลื่อนไหวที่นุ่มนวล ไม่ทำให้ร่างกายล้าจนเกินไปสำหรับผู้เริ่มต้น")
 
-    if not reasons:
-        return "กีฬานี้มีค่าเฉลี่ยในทุกมิติใกล้เคียงกับภาพรวมที่คุณกำลังมองหามากที่สุด เป็นจุดเริ่มต้นที่สมดุลสำหรับพื้นฐานร่างกายของคุณ"
+    # 2. วิเคราะห์ Social
+    if user_req[1] >= 7:
+        analysis.append(f"ในด้านสังคมที่คุณต้องการสูงถึง {user_req[1]}/10 กีฬานี้จะช่วยตอบโจทย์ด้วยการเป็นกิจกรรมที่เน้นการทำงานเป็นทีมหรือต้องมีคู่เล่น ทำให้คุณไม่รู้สึกโดดเดี่ยว")
+    elif user_req[1] <= 3:
+        analysis.append(f"คุณเลือกที่ต้องการความเป็นส่วนตัว ({user_req[1]}/10) กีฬานี้จึงเหมาะมากเพราะสามารถฝึกฝนได้ด้วยตนเอง มีสมาธิอยู่กับตัวเองได้เต็มที่")
+
+    # 3. วิเคราะห์ Budget
+    if user_req[2] <= 4:
+        analysis.append(f"เมื่อพิจารณาจากงบประมาณที่คุณต้องการประหยัด ({user_req[2]}/10) {row['Sport']} เป็นกีฬาที่เข้าถึงง่าย อุปกรณ์น้อยชิ้น ทำให้เริ่มเล่นได้ทันทีโดยไม่มีภาระทางการเงิน")
+
+    # 4. วิเคราะห์ Flexibility & Strength
+    if user_req[3] >= 7 or user_req[4] >= 7:
+        analysis.append(f"นอกจากนี้ กีฬานี้ยังมีจุดเด่นเรื่องพละกำลังและความยืดหยุ่นที่สอดคล้องกับค่าที่คุณเลือก ซึ่งจะช่วยปรับสมดุลสรีระของคุณให้แข็งแรงขึ้นในระยะยาว")
+
+    # สรุปภาพรวม
+    final_text = " ".join(analysis)
+    if not final_text:
+        final_text = "กีฬานี้ถูกคัดเลือกมาเพราะมีค่าเฉลี่ยในทุกด้านใกล้เคียงกับความต้องการที่คุณระบุไว้ใน Slider มากที่สุด"
     
-    return " อีกทั้งยัง".join(reasons)
+    return final_text
 
 # --- [INTERFACE] ---
 st.title("🏆 SportMatch AI Expert")
-st.caption("วิเคราะห์กีฬาที่แม่นยำที่สุดด้วยระบบ Machine Learning (Cosine Similarity)")
+st.caption("การวิเคราะห์ความคล้ายคลึงเชิงคณิตศาสตร์ (Cosine Similarity Logic)")
 
 with st.sidebar:
-    st.header("⚙️ ตั้งค่าข้อมูล")
+    st.header("⚙️ ตั้งค่าระบบ")
     source = st.radio("แหล่งข้อมูล:", ["Google Form (Real-time)", "ข้อมูลระบบ (Static)"])
     df = load_data(use_google=(source == "Google Form (Real-time)"))
 
@@ -77,10 +84,10 @@ with tab1:
         if experience == "เคยเล่นกีฬาบางชนิดมาก่อน":
             old_sport = st.selectbox("เลือกกีฬาที่คุณเล่นอยู่ในปัจจุบัน:", df['Sport'].unique())
             bonus_vector = df[df['Sport'] == old_sport][features].values[0]
-            st.success(f"ดึงทักษะเดิมจาก {old_sport} มาคำนวณ")
+            st.success(f"ดึงฐานทักษะจาก {old_sport}")
 
     with col_b:
-        st.subheader("🎯 เป้าหมายที่ต้องการ")
+        st.subheader("🎯 เป้าหมายตาม Slider ของคุณ")
         c1, c2 = st.columns(2)
         with c1:
             u_int = st.select_slider("1. ความเหนื่อย/Cardio", options=range(1, 11), value=5)
@@ -90,8 +97,7 @@ with tab1:
             u_flex = st.select_slider("4. ความยืดหยุ่นร่างกาย", options=range(1, 11), value=5)
             u_str = st.select_slider("5. พละกำลัง/กล้ามเนื้อ", options=range(1, 11), value=5)
         
-        button_label = "🚀 แนะนำกีฬาสำหรับคุณ" if not old_sport else "🚀 แนะนำกีฬาอันดับถัดไป"
-        run_btn = st.button(button_label, use_container_width=True)
+        run_btn = st.button("🚀 เริ่มการวิเคราะห์เชิงลึก", use_container_width=True)
 
     if run_btn:
         user_req = np.array([u_int, u_soc, u_bud, u_flex, u_str])
@@ -101,11 +107,11 @@ with tab1:
         df['Score'] = sim[0]
         
         processed_df = df.copy()
-        result_title = "🔥 แนะนำกีฬาสำหรับคุณ"
+        result_title = "🔥 รายการกีฬาที่แนะนำสำหรับคุณ"
         
         if experience == "เคยเล่นกีฬาบางชนิดมาก่อน":
             processed_df = processed_df[processed_df['Sport'] != old_sport]
-            result_title = f"🔥 แนะนำกีฬาอันดับถัดไป (พัฒนาจาก {old_sport})"
+            result_title = f"🔥 กีฬาอันดับถัดไป (แนะนำต่อเนื่องจาก {old_sport})"
             
         recs = processed_df.sort_values(by='Score', ascending=False).head(3)
         
@@ -116,15 +122,15 @@ with tab1:
             with st.container():
                 c_rank, c_info = st.columns([1, 6])
                 with c_rank:
-                    st.markdown(f"<h1 style='text-align:center; color:#4F8BF9; font-size: 50px;'>#{i}</h1>", unsafe_allow_html=True)
+                    st.markdown(f"<h1 style='text-align:center; color:#4F8BF9; font-size: 60px;'>#{i}</h1>", unsafe_allow_html=True)
                 with c_info:
-                    st.markdown(f"### **{row['Sport']}** (ความแม่นยำ {round(row['Score']*100, 1)}%)")
+                    st.markdown(f"### **{row['Sport']}** (Matching Score: {round(row['Score']*100, 1)}%)")
                     
-                    # ส่วนของเหตุผลแบบยาว
-                    detailed_reason = get_detailed_reason(row, user_req)
+                    # --- ส่วนแสดงเหตุผลแบบดึงค่า Slider มาพูด ---
+                    detailed_reason = get_advanced_reason(row, user_req)
                     st.markdown(f"""
-                    <div style="background-color: #eef2ff; padding: 15px; border-radius: 10px; border-left: 5px solid #4F8BF9; margin-bottom: 20px;">
-                        <strong>ทำไมถึงควรเริ่มกีฬานี้:</strong><br>{detailed_reason}
+                    <div style="background-color: #f0f7ff; padding: 20px; border-radius: 10px; border-left: 8px solid #4F8BF9; color: #1e3a8a; line-height: 1.6;">
+                        <strong>🔍 บทวิเคราะห์จาก AI:</strong><br>{detailed_reason}
                     </div>
                     """, unsafe_allow_html=True)
                     
@@ -137,5 +143,5 @@ with tab1:
                 st.markdown("---")
 
 with tab2:
-    st.subheader("📊 ตารางคุณสมบัติกีฬาในระบบ")
+    st.subheader("📊 ข้อมูลเชิงลึกในฐานข้อมูล")
     st.dataframe(df.drop(columns=['Score'], errors='ignore'), use_container_width=True)
