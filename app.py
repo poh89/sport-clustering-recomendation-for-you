@@ -21,17 +21,15 @@ def load_data(use_google=True):
     except:
         return pd.DataFrame({'Sport':['วิ่ง','เทนนิส','โยคะ'], 'Intensity':[9,7,3], 'Social':[1,6,2], 'Budget':[2,8,3], 'Flexibility':[3,6,10], 'Strength':[5,6,5]})
 
-# --- [ระบบวิเคราะห์อัจฉริยะ (แบบดีที่สุดที่พี่ชอบ)] ---
+# --- [ระบบวิเคราะห์อัจฉริยะ] ---
 def get_deep_reason(row, old_row, user_req, is_newbie):
     reason_text = ""
 
-    # เหตุผลเริ่มต้น
     if is_newbie:
         reason_text += f"🔰 <b>ทำไมมือใหม่ถึงควรเริ่ม:</b> {row['Sport']} เป็นกีฬาที่ปรับระดับความเข้มข้นได้ตามร่างกายคุณ ช่วยลดความกังวลเรื่องอาการบาดเจ็บ และเป็นจุดเริ่มต้นที่ดีที่สุดในการปูพื้นฐานความฟิต <br><br>"
     else:
         reason_text += f"🔄 <b>ทำไมถึงควรเปลี่ยนมาท้าทายด้วย {row['Sport']}:</b> เพื่อทะลวงกำแพงความจำเจจาก {old_row['Sport']} กีฬาชนิดนี้จะบังคับให้คุณใช้สรีระและกล้ามเนื้อในมิติใหม่ๆ ที่กีฬาเดิมยังให้ไม่ได้ <br><br>"
 
-    # โยง Slider + บอกสิ่งที่ส่งเสริม
     reason_text += "🎯 <b>สอดคล้องกับเป้าหมายของคุณ:</b> "
     benefits = []
 
@@ -107,7 +105,6 @@ if run_btn:
     
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
-            # 🔥 ดึง #1 #2 #3 กลับมาใส่ตรงนี้เหมือนเดิมเป๊ะๆ ให้พี่แล้ว!
             c_rank, c_info = st.columns([1, 6])
             
             with c_rank:
@@ -129,7 +126,15 @@ if run_btn:
                     'Score': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
                 })
                 
-                chart = alt.Chart(chart_df).mark_bar(
-                    size=18,           
-                    color='#1E3A8A'     
-                ).encode(
+                # กุรวมบรรทัด Altair ให้เรียงต่อกัน จะได้ไม่มีปัญหาลืมวงเล็บอีก
+                chart = alt.Chart(chart_df).mark_bar(size=18, color='#1E3A8A').encode(
+                    x=alt.X('Attributes:N', title=None, axis=alt.Axis(labelAngle=0)), 
+                    y=alt.Y('Score:Q', title='คะแนน', scale=alt.Scale(domain=[0, 10]))
+                ).properties(height=280)
+                
+                st.altair_chart(chart, use_container_width=True)
+        st.markdown("---")
+
+st.divider()
+st.subheader("📊 ตารางข้อมูลอ้างอิง")
+st.dataframe(df.drop(columns=['Score'], errors='ignore'), use_container_width=True)
