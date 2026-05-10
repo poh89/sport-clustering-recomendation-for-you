@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+import altair as alt # ใช้ Altair แทนเพื่อควบคุมแกนและขนาดแท่ง
 
 # --- [1. CONFIGURATION] ---
 st.set_page_config(page_title="SportMatch AI Expert", layout="wide", page_icon="🏆")
@@ -96,14 +97,23 @@ if run_btn:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # --- [แก้ไขให้เป็นแกนนอน + แท่งเล็กลง + สีน้ำเงินเข้มสวยๆ] ---
+                # --- [แก้ไขกราฟ: ใช้ Altair เพื่อบังคับแกนนอน + แท่งเล็ก + สีสวย] ---
                 chart_df = pd.DataFrame({
-                    'Attributes': ['งบประมาณ', 'เหนื่อย(Cardio)', 'ยืดหยุ่น', 'สังคม', 'พละกำลัง'],
-                    'Score': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
-                }).set_index('Attributes')
+                    'Attributes': ['Cardio', 'Social', 'Budget', 'Flexibility', 'Strength'],
+                    'Score': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']]
+                })
                 
-                # ใช้ .T (Transpose) เพื่อเปลี่ยนแกนให้ชื่อคุณสมบัติอยู่ทางซ้ายมือในแนวนอน
-                st.bar_chart(chart_df, height=220, use_container_width=True)
+                chart = alt.Chart(chart_df).mark_bar(
+                    size=30, # ปรับความหนาของแท่งให้เล็กลงที่นี่
+                    cornerRadiusTopLeft=5,
+                    cornerRadiusTopRight=5,
+                    color='#1E3A8A' # สีน้ำเงินเข้มสวยๆ
+                ).encode(
+                    x=alt.X('Attributes:N', title=None, axis=alt.Axis(labelAngle=0)), # labelAngle=0 บังคับเป็นแนวนอน
+                    y=alt.Y('Score:Q', title='คะแนน', scale=alt.Scale(domain=[0, 10]))
+                ).properties(height=250)
+                
+                st.altair_chart(chart, use_container_width=True)
                 
             st.markdown("---")
 
