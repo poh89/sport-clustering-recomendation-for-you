@@ -20,22 +20,33 @@ def load_data(use_google=True):
     except:
         return pd.DataFrame({'Sport':['วิ่ง','เทนนิส','โยคะ'], 'Intensity':[9,7,3], 'Social':[1,6,2], 'Budget':[2,8,3], 'Flexibility':[3,6,10], 'Strength':[5,6,5]})
 
-# ฟังก์ชันเหตุผลที่เน้นความหลากหลายและเจาะลึก
-def get_diverse_reason(row, old_row, user_req, is_newbie):
-    analysis = []
-    # วิเคราะห์ความต้องการ Slider
-    if user_req[0] >= 7: analysis.append(f"เสริมสมรรถนะการหายใจ (Cardio) ได้ถึงระดับ {row['Intensity']}/10")
-    if user_req[2] <= 4: analysis.append(f"เน้นความคุ้มค่าและเริ่มเล่นได้ทันที (งบประมาณระดับ {row['Budget']})")
+# ฟังก์ชันวิเคราะห์เหตุผลแบบเจาะลึก (Deep Comparative Analysis)
+def get_deep_reason(row, old_row, user_req, is_newbie):
+    reasons = []
     
-    # วิเคราะห์เทียบของเดิม
-    if not is_newbie and old_row is not None:
-        if row['Intensity'] > old_row['Intensity']:
-            analysis.append(f"ท้าทายความอึดได้มากกว่า {old_row['Sport']} ที่เคยเล่น")
-        analysis.append(f"ช่วยอุดช่องว่างและเสริมทักษะใหม่จากพื้นฐาน {old_row['Sport']}")
-    elif is_newbie:
-        analysis.append("เป็นจุดเริ่มต้นที่สมดุลในการสร้างความแข็งแรงสำหรับมือใหม่")
+    # 1. วิเคราะห์ตามความต้องการจาก Slider
+    if user_req[0] >= 7:
+        reasons.append(f"เนื่องจากคุณต้องการเน้นด้าน Cardio สูง กีฬา {row['Sport']} ที่มีความเข้มข้นระดับ {row['Intensity']}/10 จะช่วยเพิ่มขีดความสามารถของระบบไหลเวียนโลหิตได้อย่างมีนัยสำคัญ")
+    elif user_req[0] <= 3:
+        reasons.append(f"ตอบโจทย์ความต้องการออกกำลังกายแบบเบาๆ ด้วยระดับความเหนื่อยที่เหมาะสม ช่วยให้คุณออกกำลังกายได้ต่อเนื่องโดยไม่เกิดความล้าสะสมมากเกินไป")
 
-    return " อีกทั้งยัง ".join(analysis[:3])
+    if user_req[2] <= 4:
+        reasons.append(f"ในด้านความคุ้มค่า กีฬานี้มีค่าใช้จ่ายอุปกรณ์ต่ำ (ระดับ {row['Budget']}) ซึ่งสอดคล้องกับงบประมาณที่คุณตั้งไว้ ทำให้สามารถเริ่มต้นปฏิบัติได้ทันที")
+
+    # 2. วิเคราะห์เชิงเปรียบเทียบ (กรณีมีพื้นฐานเดิม)
+    if not is_newbie and old_row is not None:
+        reasons.append(f"จากการที่คุณมีทักษะจาก {old_row['Sport']} อยู่แล้ว การขยับมาเล่น {row['Sport']} จะเป็นการนำพื้นฐานเดิมมาต่อยอด")
+        if row['Intensity'] > old_row['Intensity']:
+            reasons.append(f"โดยจะเพิ่มความท้าทายด้านความอึดที่สูงกว่ากีฬาเดิมของคุณ")
+        if row['Social'] != old_row['Social']:
+            reasons.append(f"และช่วยเปิดประสบการณ์สังคมรูปแบบใหม่ที่แตกต่างจากสังคมเดิมที่คุณคุ้นเคย")
+        reasons.append(f"ซึ่งจะช่วยอุดช่องว่างการพัฒนาทักษะร่างกายในส่วนที่กีฬาเดิมอาจจะยังเข้าไม่ถึง")
+    
+    # 3. กรณีมือใหม่
+    elif is_newbie:
+        reasons.append(f"สำหรับมือใหม่ {row['Sport']} คือจุดเริ่มต้นที่สมดุลที่สุด เพราะช่วยสร้างมวลกล้ามเนื้อและพื้นฐานความอ่อนตัวที่จำเป็น เพื่อเป็นฐานในการเล่นกีฬาชนิดอื่นๆ ในอนาคต")
+
+    return " อีกทั้งยัง ".join(reasons)
 
 # --- [3. UI INTERFACE] ---
 with st.sidebar:
@@ -44,7 +55,7 @@ with st.sidebar:
     df = load_data(use_google=(source == "Google Form (Real-time)"))
 
 st.title("🏆 SportMatch AI Expert")
-st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะ (Adaptive Sports Analysis)")
+st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะด้วยการคำนวณเชิงลึก (Advanced Sports Reasoning)")
 
 col_left, col_right = st.columns([1, 2])
 
@@ -57,7 +68,7 @@ with col_left:
         selected_old = st.selectbox("เลือกกีฬาที่คุณเล่นอยู่ในปัจจุบัน:", df['Sport'].unique())
         old_sport_row = df[df['Sport'] == selected_old].iloc[0]
         bonus_vector = old_sport_row[features].values
-        st.success(f"อ้างอิงพื้นฐานจาก: {selected_old}")
+        st.success(f"เชื่อมโยงทักษะจาก: {selected_old}")
 
 with col_right:
     st.subheader("🎯 เป้าหมายที่ต้องการ")
@@ -69,7 +80,7 @@ with col_right:
     with c2:
         u_flex = st.select_slider("4. ความยืดหยุ่น", options=range(1, 11), value=5)
         u_str = st.select_slider("5. พละกำลัง", options=range(1, 11), value=5)
-    run_btn = st.button("🚀 เริ่มการวิเคราะห์", use_container_width=True)
+    run_btn = st.button("🚀 เริ่มการวิเคราะห์เชิงลึก", use_container_width=True)
 
 if run_btn:
     user_req = np.array([u_int, u_soc, u_bud, u_flex, u_str])
@@ -83,26 +94,32 @@ if run_btn:
     recs = processed_df.sort_values(by='Score', ascending=False).head(3)
     
     st.divider()
-    st.header("🔥 รายการที่แนะนำจากฐานข้อมูล")
+    st.header("🔥 ผลการวิเคราะห์และกีฬาที่แนะนำ")
     
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
             c_rank, c_info = st.columns([0.8, 5.2])
             with c_rank:
-                st.markdown(f"<h1 style='color:#4F8BF9; font-size:60px;'>#{i}</h1>", unsafe_allow_html=True)
+                st.markdown(f"<h1 style='color:#4F8BF9; font-size:60px; margin-top:20px;'>#{i}</h1>", unsafe_allow_html=True)
             with c_info:
-                st.markdown(f"### **{row['Sport']}** (Match: {round(row['Score']*100, 1)}%)")
-                reason = get_diverse_reason(row, old_sport_row, user_req, is_newbie)
-                st.info(f"**AI วิเคราะห์เหตุผล:** {reason}")
+                st.markdown(f"### **{row['Sport']}** (Match Score: {round(row['Score']*100, 1)}%)")
                 
-                # กราฟรูปแบบใหม่: Area Chart (สวยงามและไม่ต้องลง Library เพิ่ม)
+                # แสดงเหตุผลวิเคราะห์แบบยาวและเจาะลึก
+                reason = get_deep_reason(row, old_sport_row, user_req, is_newbie)
+                st.markdown(f"""
+                <div style="background-color: #f1f7fe; padding: 20px; border-radius: 12px; border-left: 6px solid #4F8BF9; margin-bottom: 20px;">
+                    <strong>🧠 บทวิเคราะห์โดย AI:</strong><br>{reason}
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # กราฟแท่ง (Bar Chart) แสดงคุณสมบัติรายด้าน
                 chart_data = pd.DataFrame({
-                    'หัวข้อ': ['Cardio', 'Social', 'Budget', 'Flex', 'Str'],
+                    'คุณสมบัติ': ['Cardio', 'Social', 'Budget', 'Flex', 'Strength'],
                     'คะแนน': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']]
-                }).set_index('หัวข้อ')
-                st.area_chart(chart_data, height=180)
+                }).set_index('คุณสมบัติ')
+                st.bar_chart(chart_data, height=200)
             st.markdown("---")
 
 st.divider()
-st.subheader(f"📊 ฐานข้อมูลที่ใช้ ({source})")
+st.subheader(f"📊 ตารางข้อมูลอ้างอิง ({source})")
 st.dataframe(df.drop(columns=['Score'], errors='ignore'), use_container_width=True)
