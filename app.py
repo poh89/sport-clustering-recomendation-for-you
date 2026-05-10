@@ -20,32 +20,22 @@ def load_data(use_google=True):
     except:
         return pd.DataFrame({'Sport':['วิ่ง','เทนนิส','โยคะ'], 'Intensity':[9,7,3], 'Social':[1,6,2], 'Budget':[2,8,3], 'Flexibility':[3,6,10], 'Strength':[5,6,5]})
 
-# ฟังก์ชันวิเคราะห์เหตุผลแบบเจาะลึก (Deep Comparative Analysis)
 def get_deep_reason(row, old_row, user_req, is_newbie):
     reasons = []
-    
-    # 1. วิเคราะห์ตามความต้องการจาก Slider
     if user_req[0] >= 7:
         reasons.append(f"เนื่องจากคุณต้องการเน้นด้าน Cardio สูง กีฬา {row['Sport']} ที่มีความเข้มข้นระดับ {row['Intensity']}/10 จะช่วยเพิ่มขีดความสามารถของระบบไหลเวียนโลหิตได้อย่างมีนัยสำคัญ")
     elif user_req[0] <= 3:
         reasons.append(f"ตอบโจทย์ความต้องการออกกำลังกายแบบเบาๆ ด้วยระดับความเหนื่อยที่เหมาะสม ช่วยให้คุณออกกำลังกายได้ต่อเนื่องโดยไม่เกิดความล้าสะสมมากเกินไป")
-
     if user_req[2] <= 4:
         reasons.append(f"ในด้านความคุ้มค่า กีฬานี้มีค่าใช้จ่ายอุปกรณ์ต่ำ (ระดับ {row['Budget']}) ซึ่งสอดคล้องกับงบประมาณที่คุณตั้งไว้ ทำให้สามารถเริ่มต้นปฏิบัติได้ทันที")
 
-    # 2. วิเคราะห์เชิงเปรียบเทียบ (กรณีมีพื้นฐานเดิม)
     if not is_newbie and old_row is not None:
         reasons.append(f"จากการที่คุณมีทักษะจาก {old_row['Sport']} อยู่แล้ว การขยับมาเล่น {row['Sport']} จะเป็นการนำพื้นฐานเดิมมาต่อยอด")
         if row['Intensity'] > old_row['Intensity']:
             reasons.append(f"โดยจะเพิ่มความท้าทายด้านความอึดที่สูงกว่ากีฬาเดิมของคุณ")
-        if row['Social'] != old_row['Social']:
-            reasons.append(f"และช่วยเปิดประสบการณ์สังคมรูปแบบใหม่ที่แตกต่างจากสังคมเดิมที่คุณคุ้นเคย")
         reasons.append(f"ซึ่งจะช่วยอุดช่องว่างการพัฒนาทักษะร่างกายในส่วนที่กีฬาเดิมอาจจะยังเข้าไม่ถึง")
-    
-    # 3. กรณีมือใหม่
     elif is_newbie:
         reasons.append(f"สำหรับมือใหม่ {row['Sport']} คือจุดเริ่มต้นที่สมดุลที่สุด เพราะช่วยสร้างมวลกล้ามเนื้อและพื้นฐานความอ่อนตัวที่จำเป็น เพื่อเป็นฐานในการเล่นกีฬาชนิดอื่นๆ ในอนาคต")
-
     return " อีกทั้งยัง ".join(reasons)
 
 # --- [3. UI INTERFACE] ---
@@ -55,7 +45,7 @@ with st.sidebar:
     df = load_data(use_google=(source == "Google Form (Real-time)"))
 
 st.title("🏆 SportMatch AI Expert")
-st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะด้วยการคำนวณเชิงลึก (Advanced Sports Reasoning)")
+st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะ (Advanced Comparative Reasoning)")
 
 col_left, col_right = st.columns([1, 2])
 
@@ -104,20 +94,21 @@ if run_btn:
             with c_info:
                 st.markdown(f"### **{row['Sport']}** (Match Score: {round(row['Score']*100, 1)}%)")
                 
-                # แสดงเหตุผลวิเคราะห์แบบยาวและเจาะลึก
                 reason = get_deep_reason(row, old_sport_row, user_req, is_newbie)
                 st.markdown(f"""
-                <div style="background-color: #f1f7fe; padding: 20px; border-radius: 12px; border-left: 6px solid #4F8BF9; margin-bottom: 20px;">
+                <div style="background-color: #f1f7fe; padding: 20px; border-radius: 12px; border-left: 6px solid #4F8BF9; margin-bottom: 10px;">
                     <strong>🧠 บทวิเคราะห์โดย AI:</strong><br>{reason}
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # กราฟแท่ง (Bar Chart) แสดงคุณสมบัติรายด้าน
+                # ปรับแต่งแผนภูมิแท่งให้สวยงาม แท่งเล็กลง และตัวอักษรแนวนอน
                 chart_data = pd.DataFrame({
-                    'คุณสมบัติ': ['Cardio', 'Social', 'Budget', 'Flex', 'Strength'],
-                    'คะแนน': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']]
-                }).set_index('คุณสมบัติ')
-                st.bar_chart(chart_data, height=200)
+                    'Attributes': ['Cardio', 'Social', 'Budget', 'Flexibility', 'Strength'],
+                    'Score': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']]
+                })
+                
+                # ใช้กราฟแท่งแบบ Horizontal เพื่อให้อ่านชื่อแกนง่าย
+                st.bar_chart(data=chart_data.set_index('Attributes'), height=250, use_container_width=True)
             st.markdown("---")
 
 st.divider()
