@@ -28,11 +28,10 @@ def get_deep_reason(row, old_row, user_req, is_newbie):
         reasons.append(f"ตอบโจทย์ความเหนื่อยระดับต่ำ ช่วยให้เล่นได้ต่อเนื่องโดยไม่ล้าสะสม")
     if user_req[2] <= 4:
         reasons.append(f"ใช้งบประมาณต่ำ (ระดับ {row['Budget']}) เริ่มได้ทันที")
-
     if not is_newbie and old_row is not None:
-        reasons.append(f"เป็นการนำทักษะจาก {old_row['Sport']} มาต่อยอดเพื่ออุดช่องว่างการพัฒนาที่กีฬาเดิมยังเข้าไม่ถึง")
+        reasons.append(f"เป็นการนำทักษะเดิมมาต่อยอดเพื่ออุดช่องว่างการพัฒนาที่กีฬาเดิมยังเข้าไม่ถึง")
     elif is_newbie:
-        reasons.append(f"สำหรับมือใหม่ {row['Sport']} คือจุดเริ่มต้นที่สมดุลที่สุดในการสร้างพื้นฐานร่างกาย")
+        reasons.append(f"สำหรับมือใหม่ {row['Sport']} คือจุดเริ่มต้นที่สมดุลที่สุด")
     return " อีกทั้งยัง ".join(reasons)
 
 # --- [3. UI INTERFACE] ---
@@ -92,19 +91,19 @@ if run_btn:
                 
                 reason = get_deep_reason(row, old_sport_row, user_req, is_newbie)
                 st.markdown(f"""
-                <div style="background-color: #F0F4F8; padding: 15px; border-radius: 10px; border-left: 6px solid #1E3A8A; font-size: 16px;">
+                <div style="background-color: #F0F4F8; padding: 15px; border-radius: 10px; border-left: 6px solid #1E3A8A; font-size: 16px; margin-bottom: 20px;">
                     <strong>🧠 บทวิเคราะห์โดย AI:</strong> {reason}
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # --- [แก้ไขกราฟ: แนวนอน แท่งเล็ก สีสวย] ---
+                # --- [แก้ไขให้เป็นแกนนอน + แท่งเล็กลง + สีน้ำเงินเข้มสวยๆ] ---
                 chart_df = pd.DataFrame({
-                    'คุณสมบัติ': ['งบประมาณ', 'เหนื่อย(Cardio)', 'ยืดหยุ่น', 'สังคม', 'พละกำลัง'],
-                    'คะแนน': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
-                })
+                    'Attributes': ['งบประมาณ', 'เหนื่อย(Cardio)', 'ยืดหยุ่น', 'สังคม', 'พละกำลัง'],
+                    'Score': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
+                }).set_index('Attributes')
                 
-                # ใช้ Horizontal Bar Chart เพื่อให้ตัวหนังสือเป็นแนวนอนและอ่านง่าย
-                st.bar_chart(data=chart_df.set_index('คุณสมบัติ'), height=250, use_container_width=True)
+                # ใช้ .T (Transpose) เพื่อเปลี่ยนแกนให้ชื่อคุณสมบัติอยู่ทางซ้ายมือในแนวนอน
+                st.bar_chart(chart_df, height=220, use_container_width=True)
                 
             st.markdown("---")
 
