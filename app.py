@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-import plotly.graph_objects as go 
 
 # --- [1. CONFIGURATION] ---
 st.set_page_config(page_title="SportMatch AI Expert", layout="wide", page_icon="🏆")
@@ -19,36 +18,22 @@ def load_data(use_google=True):
             df[col] = pd.to_numeric(df[col], errors='coerce').fillna(5)
         return df
     except:
-        # ข้อมูล Static สำรอง
         return pd.DataFrame({'Sport':['วิ่ง','เทนนิส','โยคะ'], 'Intensity':[9,7,3], 'Social':[1,6,2], 'Budget':[2,8,3], 'Flexibility':[3,6,10], 'Strength':[5,6,5]})
 
-def create_radar_chart(row):
-    categories = ['Cardio', 'Social', 'Budget', 'Flex', 'Strength']
-    fig = go.Figure()
-    fig.add_trace(go.Scatterpolar(
-        r=[row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']],
-        theta=categories, fill='toself', name=row['Sport'], line_color='#4F8BF9'
-    ))
-    fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), showlegend=False, height=250, margin=dict(l=20, r=20, t=20, b=20))
-    return fig
-
-# ฟังก์ชันเหตุผลแบบ "Deep Analysis" ตามที่พี่สั่ง
-def get_expert_reason(new_row, old_row, user_req, is_newbie):
+# ฟังก์ชันเหตุผลที่เน้นความหลากหลายและเจาะลึก
+def get_diverse_reason(row, old_row, user_req, is_newbie):
     analysis = []
+    # วิเคราะห์ความต้องการ Slider
+    if user_req[0] >= 7: analysis.append(f"เสริมสมรรถนะการหายใจ (Cardio) ได้ถึงระดับ {row['Intensity']}/10")
+    if user_req[2] <= 4: analysis.append(f"เน้นความคุ้มค่าและเริ่มเล่นได้ทันที (งบประมาณระดับ {row['Budget']})")
     
-    # วิเคราะห์ความต้องการตาม Slider
-    if user_req[0] >= 7: analysis.append(f"ด้วยระดับความเหนื่อยที่คุณเลือก ({user_req[0]}/10) กีฬานี้จะช่วยพัฒนาระบบหัวใจได้อย่างดีเยี่ยม")
-    if user_req[2] <= 4: analysis.append(f"เป็นทางเลือกที่คุ้มค่าเพราะใช้ทุนต่ำ (ระดับ {new_row['Budget']}) เริ่มได้ทันที")
-    
-    # วิเคราะห์เชิงเปรียบเทียบ (ถ้าเคยเล่นมาก่อน)
+    # วิเคราะห์เทียบของเดิม
     if not is_newbie and old_row is not None:
-        if new_row['Intensity'] > old_row['Intensity']:
-            analysis.append(f"กีฬานี้จะช่วยเพิ่มขีดจำกัดความอึดได้สูงกว่า {old_row['Sport']} ที่คุณเล่นอยู่")
-        if new_row['Social'] != old_row['Social']:
-            analysis.append(f"เป็นการเปลี่ยนบรรยากาศสังคมจากเดิม เพื่อให้ได้ประสบการณ์ที่หลากหลายขึ้น")
-        analysis.append(f"ช่วยเสริมสร้างกล้ามเนื้อส่วนที่ {old_row['Sport']} อาจยังเข้าไม่ถึง")
+        if row['Intensity'] > old_row['Intensity']:
+            analysis.append(f"ท้าทายความอึดได้มากกว่า {old_row['Sport']} ที่เคยเล่น")
+        analysis.append(f"ช่วยอุดช่องว่างและเสริมทักษะใหม่จากพื้นฐาน {old_row['Sport']}")
     elif is_newbie:
-        analysis.append("นี่คือจุดเริ่มต้นที่สมดุลที่สุดในการสร้างพื้นฐานร่างกายเพื่อลดการบาดเจ็บในอนาคต")
+        analysis.append("เป็นจุดเริ่มต้นที่สมดุลในการสร้างความแข็งแรงสำหรับมือใหม่")
 
     return " อีกทั้งยัง ".join(analysis[:3])
 
@@ -59,7 +44,7 @@ with st.sidebar:
     df = load_data(use_google=(source == "Google Form (Real-time)"))
 
 st.title("🏆 SportMatch AI Expert")
-st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะ (Comparative Recommendation)")
+st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะ (Adaptive Sports Analysis)")
 
 col_left, col_right = st.columns([1, 2])
 
@@ -90,7 +75,6 @@ if run_btn:
     user_req = np.array([u_int, u_soc, u_bud, u_flex, u_str])
     is_newbie = (experience == "ไม่มีพื้นฐาน")
     final_vector = (user_req * 0.7) + (bonus_vector * 0.3) if not is_newbie else user_req
-    
     sim = cosine_similarity([final_vector], df[features])
     df['Score'] = sim[0]
     
@@ -103,15 +87,20 @@ if run_btn:
     
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
-            c_rank, c_info, c_plot = st.columns([0.8, 3.5, 2.5])
+            c_rank, c_info = st.columns([0.8, 5.2])
             with c_rank:
                 st.markdown(f"<h1 style='color:#4F8BF9; font-size:60px;'>#{i}</h1>", unsafe_allow_html=True)
             with c_info:
                 st.markdown(f"### **{row['Sport']}** (Match: {round(row['Score']*100, 1)}%)")
-                reason = get_expert_reason(row, old_sport_row, user_req, is_newbie)
-                st.info(f"**วิเคราะห์เชิงลึก:** {reason}")
-            with c_plot:
-                st.plotly_chart(create_radar_chart(row), use_container_width=True)
+                reason = get_diverse_reason(row, old_sport_row, user_req, is_newbie)
+                st.info(f"**AI วิเคราะห์เหตุผล:** {reason}")
+                
+                # กราฟรูปแบบใหม่: Area Chart (สวยงามและไม่ต้องลง Library เพิ่ม)
+                chart_data = pd.DataFrame({
+                    'หัวข้อ': ['Cardio', 'Social', 'Budget', 'Flex', 'Str'],
+                    'คะแนน': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']]
+                }).set_index('หัวข้อ')
+                st.area_chart(chart_data, height=180)
             st.markdown("---")
 
 st.divider()
