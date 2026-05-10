@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- [1. CONFIGURATION] ---
-st.set_page_config(page_title="SportMatch AI Expert", layout="wide", page_icon="🏆")
+st.set_page_config(page_title="SportMatch AI ", layout="wide", page_icon="🏆")
 
 # ลิงก์เชื่อมต่อ Google Sheet (CSV)
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-CWhytgN4VrGjp82zbtzbjTrw0HtIqcUtOUuyt8HVwiJbwB9_gRBPt5MRlGUe6AGILR9W2-y8_Inf/pub?output=csv"
