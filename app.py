@@ -36,12 +36,10 @@ def get_deep_reason(row, old_row, user_req, is_newbie, gender, age):
         reason_text += f"🔰 <b>ทำไมมือใหม่ (เพศ{gender} อายุ {age} ปี) ถึงควรเริ่ม:</b> {row['Sport']} เป็นกีฬาที่ปรับระดับความเข้มข้นได้ตามร่างกายคุณ ช่วยลดความกังวลเรื่องอาการบาดเจ็บ และเป็นจุดเริ่มต้นที่ดีที่สุดในการปูพื้นฐานความฟิต <br><br>"
     else:
         reason_text += f"🔄 <b>ทำไมถึงควรเปลี่ยนมาท้าทายด้วย {row['Sport']}:</b> เพื่อทะลวงกำแพงความจำเจจาก {old_row['Sport']} สำหรับผู้ใช้เพศ{gender} วัย {age} ปี กีฬาชนิดนี้จะบังคับให้คุณใช้สรีระและกล้ามเนื้อในมิติใหม่ๆ ที่กีฬาเดิมยังให้ไม่ได้ <br><br>"
-
     if age >= 40:
         reason_text += f"🦴 <b>ข้อแนะนำด้านสรีรวิทยา (วัย {age} ปี):</b> กีฬา {row['Sport']} ช่วยรักษามวลกล้ามเนื้อและเพิ่มความยืดหยุ่น ซึ่งจำเป็นอย่างยิ่งสำหรับการป้องกันภาวะข้อต่อเสื่อมในวัยของคุณ <br><br>"
     elif age <= 22:
         reason_text += f"⚡ <b>การส่งเสริมศักยภาพร่างกาย (วัยรุ่น/วัยเรียน):</b> กีฬานี้จะช่วยกระตุ้นการเผาผลาญและสร้างมวลกล้ามเนื้อหลัก (Core Muscle) ได้อย่างรวดเร็วในช่วงที่ร่างกายกำลังพัฒนา <br><br>"
-
     reason_text += "🎯 <b>สอดคล้องกับเป้าหมายของคุณ:</b> "
     benefits = []
     if user_req[0] >= 6:
@@ -67,6 +65,9 @@ def get_deep_reason(row, old_row, user_req, is_newbie, gender, age):
 with st.sidebar:
     st.header("⚙️ ตั้งค่าแหล่งข้อมูล")
     st.info("ระบบเชื่อมต่อ Google Sheets แบบ Real-time")
+    if st.button("🔄 ล้าง Cache และรีเฟรชข้อมูล"):
+        st.cache_data.clear()
+        st.rerun()
 
 df = load_data()
 
@@ -102,8 +103,8 @@ with col_right:
 
 # --- [5. PROCESSING] ---
 if run_btn:
-    user_req    = np.array([u_int, u_soc, u_bud, u_flex, u_str])
-    is_newbie   = (experience == "ไม่มีพื้นฐาน")
+    user_req     = np.array([u_int, u_soc, u_bud, u_flex, u_str])
+    is_newbie    = (experience == "ไม่มีพื้นฐาน")
     final_vector = (user_req * 0.7) + (bonus_vector * 0.3) if not is_newbie else user_req
 
     sim = cosine_similarity([final_vector], df[features])
@@ -111,11 +112,9 @@ if run_btn:
 
     processed_df = df.copy()
 
-    # ตัดกีฬาเดิมออกถ้าเป็น Advanced Mode
     if not is_newbie:
         processed_df = processed_df[processed_df['Sport'] != selected_old]
 
-    # TDS Filter สำหรับ Beginner
     if is_newbie:
         processed_df['TDS'] = (
             processed_df['Complexity']    * 0.4 +
@@ -142,7 +141,6 @@ if run_btn:
                             margin-bottom: 20px; line-height: 1.6; color: #334155;">
                     {reason}
                 </div>""", unsafe_allow_html=True)
-
                 chart_df = pd.DataFrame({
                     'Attributes': ['Budget', 'Cardio', 'Flexibility', 'Social', 'Strength'],
                     'Score': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
