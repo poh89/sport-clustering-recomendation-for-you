@@ -21,14 +21,20 @@ def load_data(use_google=True):
     except:
         return pd.DataFrame({'Sport':['วิ่ง','เทนนิส','โยคะ'], 'Intensity':[9,7,3], 'Social':[1,6,2], 'Budget':[2,8,3], 'Flexibility':[3,6,10], 'Strength':[5,6,5]})
 
-# --- [ระบบวิเคราะห์อัจฉริยะ] ---
-def get_deep_reason(row, old_row, user_req, is_newbie):
+# --- [ระบบวิเคราะห์อัจฉริยะแบบปรับแต่งตามข้อมูลบุคคล] ---
+def get_deep_reason(row, old_row, user_req, is_newbie, gender, age):
     reason_text = ""
 
     if is_newbie:
-        reason_text += f"🔰 <b>ทำไมมือใหม่ถึงควรเริ่ม:</b> {row['Sport']} เป็นกีฬาที่ปรับระดับความเข้มข้นได้ตามร่างกายคุณ ช่วยลดความกังวลเรื่องอาการบาดเจ็บ และเป็นจุดเริ่มต้นที่ดีที่สุดในการปูพื้นฐานความฟิต <br><br>"
+        reason_text += f"🔰 <b>ทำไมมือใหม่ (เพศ{gender} อายุ {age} ปี) ถึงควรเริ่ม:</b> {row['Sport']} เป็นกีฬาที่ปรับระดับความเข้มข้นได้ตามร่างกายคุณ ช่วยลดความกังวลเรื่องอาการบาดเจ็บ และเป็นจุดเริ่มต้นที่ดีที่สุดในการปูพื้นฐานความฟิต <br><br>"
     else:
-        reason_text += f"🔄 <b>ทำไมถึงควรเปลี่ยนมาท้าทายด้วย {row['Sport']}:</b> เพื่อทะลวงกำแพงความจำเจจาก {old_row['Sport']} กีฬาชนิดนี้จะบังคับให้คุณใช้สรีระและกล้ามเนื้อในมิติใหม่ๆ ที่กีฬาเดิมยังให้ไม่ได้ <br><br>"
+        reason_text += f"🔄 <b>ทำไมถึงควรเปลี่ยนมาท้าทายด้วย {row['Sport']}:</b> เพื่อทะลวงกำแพงความจำเจจาก {old_row['Sport']} สำหรับผู้ใช้เพศ{gender} วัย {age} ปี กีฬาชนิดนี้จะบังคับให้คุณใช้สรีระและกล้ามเนื้อในมิติใหม่ๆ ที่กีฬาเดิมยังให้ไม่ได้ <br><br>"
+
+    # ตรรกะวิเคราะห์เพิ่มเติมตามช่วงอายุ (Age-Based Ergonomics)
+    if age >= 40:
+        reason_text += f"🦴 <b>ข้อแนะนำด้านสรีรวิทยา (วัย {age} ปี):</b> กีฬา {row['Sport']} ช่วยรักษามวลกล้ามเนื้อและเพิ่มความยืดหยุ่น ซึ่งจำเป็นอย่างยิ่งสำหรับการป้องกันภาวะข้อต่อเสื่อมในวัยของคุณ <br><br>"
+    elif age <= 22:
+        reason_text += f"⚡ <b>การส่งเสริมศักยภาพร่างกาย (วัยรุ่น/วัยเรียน):</b> กีฬานี้จะช่วยกระตุ้นการเผาผลาญและสร้างมวลกล้ามเนื้อหลัก (Core Muscle) ได้อย่างรวดเร็วในช่วงที่ร่างกายกำลังพัฒนา <br><br>"
 
     reason_text += "🎯 <b>สอดคล้องกับเป้าหมายของคุณ:</b> "
     benefits = []
@@ -70,6 +76,12 @@ col_left, col_right = st.columns([1, 2])
 
 with col_left:
     st.subheader("👤 ข้อมูลผู้ใช้งาน")
+    
+    # เพิ่ม Widget รับค่า เพศ และ อายุ ที่นี่สัส!
+    gender = st.selectbox("ระบุเพศของคุณ:", ["ชาย", "หญิง", "ไม่ระบุ"])
+    age = st.number_input("ระบุอายุของคุณ (ปี):", min_value=1, max_value=100, value=20, step=1)
+    
+    st.divider()
     experience = st.radio("พื้นฐานกีฬา:", ["ไม่มีพื้นฐาน", "เคยเล่นกีฬาบางชนิดมาก่อน"])
     old_sport_row = None
     bonus_vector = np.zeros(5)
@@ -96,42 +108,42 @@ if run_btn:
     final_vector = (user_req * 0.7) + (bonus_vector * 0.3) if not is_newbie else user_req
     sim = cosine_similarity([final_vector], df[features])
     df['Score'] = sim[0]
-    
+     
     processed_df = df.copy()
     if not is_newbie: processed_df = processed_df[processed_df['Sport'] != selected_old]
     recs = processed_df.sort_values(by='Score', ascending=False).head(3)
-    
+     
     st.divider()
-    
+     
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
             c_rank, c_info = st.columns([1, 6])
-            
+             
             with c_rank:
                 st.markdown(f"<h1 style='color:#1E3A8A; font-size:65px; margin-top:20px; text-align:center;'>#{i}</h1>", unsafe_allow_html=True)
-                
+                 
             with c_info:
                 st.markdown(f"### **{row['Sport']}** (Match Score: {round(row['Score']*100, 1)}%)")
-                
-                reason = get_deep_reason(row, old_sport_row, user_req, is_newbie)
-                
+                 
+                # ส่งค่า gender และ age เข้าไปประมวลผลคำอธิบายเหตุผลด้วยสัส
+                reason = get_deep_reason(row, old_sport_row, user_req, is_newbie, gender, age)
+                 
                 st.markdown(f"""
                 <div style="background-color: #F8FAFC; padding: 20px; border-radius: 10px; border-left: 6px solid #1E3A8A; font-size: 15px; margin-bottom: 20px; line-height: 1.6; color: #334155;">
                     {reason}
                 </div>
                 """, unsafe_allow_html=True)
-                
+                 
                 chart_df = pd.DataFrame({
                     'Attributes': ['Budget', 'Cardio', 'Flexibility', 'Social', 'Strength'],
                     'Score': [row['Budget'], row['Intensity'], row['Flexibility'], row['Social'], row['Strength']]
                 })
-                
-                # กุรวมบรรทัด Altair ให้เรียงต่อกัน จะได้ไม่มีปัญหาลืมวงเล็บอีก
+                 
                 chart = alt.Chart(chart_df).mark_bar(size=18, color='#1E3A8A').encode(
                     x=alt.X('Attributes:N', title=None, axis=alt.Axis(labelAngle=0)), 
                     y=alt.Y('Score:Q', title='คะแนน', scale=alt.Scale(domain=[0, 10]))
                 ).properties(height=280)
-                
+                 
                 st.altair_chart(chart, use_container_width=True)
         st.markdown("---")
 
