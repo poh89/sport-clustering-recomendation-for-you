@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import cosine_similarity, euclidean_distances
 import altair as alt
 
 # --- [1. CONFIGURATION] ---
@@ -10,6 +10,7 @@ st.set_page_config(page_title="SportMatch AI Expert", layout="wide", page_icon="
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-CWhytgN4VrGjp82zbtzbjTrw0HtIqcUtOUuyt8HVwiJbwB9_gRBPt5MRlGUe6AGILR9W2-y8_Inf/pub?output=csv"
 
 features = ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']
+
 
 # --- [2. LOAD DATA] ---
 @st.cache_data(ttl=1)
@@ -148,15 +149,26 @@ with col_right:
     run_btn = st.button("🚀 เริ่มการวิเคราะห์", use_container_width=True)
 
 
-# --- [5. PROCESSING] ---
+# --- [5. PROCESSING - HYBRID SCORE] ---
 if run_btn:
     user_req     = np.array([u_int, u_soc, u_bud, u_flex, u_str], dtype=float)
     is_newbie    = (experience == "ไม่มีพื้นฐาน (มือใหม่)")
     final_vector = (user_req * 0.7) + (bonus_vector * 0.3) if not is_newbie else user_req
 
-    # คำนวณ Cosine Similarity
-    sim = cosine_similarity([final_vector], df[features].values)
-    df['Score'] = sim[0]
+    sport_matrix = df[features].values
+
+    # 1. Cosine Similarity (วัดทิศทาง)
+    cosine_scores = cosine_similarity([final_vector], sport_matrix)[0]
+
+    # 2. Euclidean Distance → แปลงเป็น Similarity (วัดความใกล้เคียง)
+    euclidean_dist = euclidean_distances([final_vector], sport_matrix)[0]
+    max_dist = np.sqrt(5 * (10**2))
+    euclidean_scores = 1 - (euclidean_dist / max_dist)
+
+    # 3. Hybrid Score = Cosine 50% + Euclidean 50%
+    df['Cosine']    = cosine_scores
+    df['Euclidean'] = euclidean_scores
+    df['Score']     = (cosine_scores * 0.5) + (euclidean_scores * 0.5)
 
     processed_df = df.copy()
 
@@ -187,8 +199,13 @@ if run_btn:
     # Top 3
     recs = processed_df.sort_values(by='Score', ascending=False).head(3)
 
+    # --- แสดงผลลัพธ์ ---
     st.divider()
     st.subheader("🎯 ผลการวิเคราะห์: กีฬาที่เหมาะกับคุณ")
+
+    with st.expander("🔍 Debug: Top 10 คะแนน (Hybrid Score)"):
+        top10 = processed_df.sort_values('Score', ascending=False).head(10)
+        st.dataframe(top10[['Sport', 'Cosine', 'Euclidean', 'Score'] + features], use_container_width=True)
 
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
@@ -209,7 +226,6 @@ if run_btn:
                     {reason}
                 </div>""", unsafe_allow_html=True)
 
-                # Grouped Bar Chart
                 chart_df = pd.DataFrame({
                     'Attributes': ['Cardio', 'Social', 'Budget', 'Flexibility', 'Strength'],
                     'กีฬาแนะนำ': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']],
@@ -231,9 +247,10 @@ if run_btn:
 
         st.markdown("---")
 
+
 # --- [6. DATA TABLE] ---
 st.divider()
 st.subheader("📊 ตารางข้อมูลกีฬาทั้งหมด")
-display_df = df.drop(columns=['Score', 'TDS'], errors='ignore')
+display_df = df.drop(columns=['Score', 'TDS', 'Cosine', 'Euclidean'], errors='ignore')
 st.dataframe(display_df, use_container_width=True, height=400)
 st.caption(f"📋 จำนวนกีฬาในระบบ: {len(df)} รายการ")
