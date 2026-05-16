@@ -112,16 +112,23 @@ if run_btn:
 
     processed_df = df.copy()
 
-   if is_newbie:
-    processed_df['TDS'] = (
-        processed_df['Complexity']    * 0.4 +
-        processed_df['Physiological'] * 0.3 +
-        processed_df['Risk']          * 0.3
-    )
-    # Debug ชั่วคราว
-    st.write("คอลัมน์ที่มีทั้งหมด:", df.columns.tolist())
-    st.write("ตัวอย่างค่า TDS:", processed_df[['Sport', 'Complexity', 'Physiological', 'Risk', 'TDS']].head(10))
-    processed_df = processed_df[processed_df['TDS'] < 7]
+    if not is_newbie:
+        processed_df = processed_df[processed_df['Sport'] != selected_old]
+
+    if is_newbie:
+        processed_df['TDS'] = (
+            processed_df['Complexity']    * 0.4 +
+            processed_df['Physiological'] * 0.3 +
+            processed_df['Risk']          * 0.3
+        )
+        # Debug ชั่วคราว — ลบออกหลังแก้เสร็จ
+        st.write("คอลัมน์ทั้งหมด:", processed_df.columns.tolist())
+        st.write("ค่า TDS:", processed_df[['Sport', 'Complexity', 'Physiological', 'Risk', 'TDS']].head(10))
+        processed_df = processed_df[processed_df['TDS'] < 7]
+
+    recs = processed_df.sort_values(by='Score', ascending=False).head(3)
+
+    st.divider()
 
     for i, (idx, row) in enumerate(recs.iterrows(), 1):
         with st.container():
