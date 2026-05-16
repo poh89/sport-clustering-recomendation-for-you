@@ -11,42 +11,38 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-CWhytgN4VrGjp82z
 
 features = ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']
 
-# --- [2. LOAD DATA - แก้ไขใหม่] ---
+# --- [2. LOAD DATA] ---
 @st.cache_data(ttl=1)
 def load_data():
     try:
         raw_df = pd.read_csv(SHEET_URL)
 
-        # --- หาคอลัมน์ที่ถูกต้อง ---
-        # คอลัมน์ใน Sheet: ประทับเวลา, ชื่อกีฬา, Cardio, Social, Budget, Flexibility, Strength, Complexity, Physiological, Risk
-        # ต้องการ: คอลัมน์ที่ 2-10 (index 1-9)
-        df = raw_df.iloc[:, 1:10].copy()
+        # จับคอลัมน์ A ถึง I (index 0-8) = 9 คอลัมน์
+        df = raw_df.iloc[:, 0:9].copy()
         df.columns = ['Sport', 'Intensity', 'Social', 'Budget', 'Flexibility', 'Strength',
                       'Complexity', 'Physiological', 'Risk']
 
-        # --- ลบแถวที่ชื่อกีฬาว่าง ---
-        df = df.dropna(subset=['Sport'])
+        # ลบแถวที่ชื่อกีฬาว่าง
+        df['Sport'] = df['Sport'].astype(str)
         df = df[df['Sport'].str.strip() != '']
+        df = df[df['Sport'].str.lower() != 'nan']
         df = df.reset_index(drop=True)
 
-        # --- แปลงค่าตัวเลข ---
+        # แปลงค่าตัวเลข
         numeric_cols = ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength',
                         'Complexity', 'Physiological', 'Risk']
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
 
-        # --- ตรวจจับแถวที่ค่า TDS ว่าง (Complexity/Physiological/Risk) ---
+        # ตรวจจับค่าว่าง TDS
         tds_cols = ['Complexity', 'Physiological', 'Risk']
         missing_tds = df[df[tds_cols].isnull().any(axis=1)]
         if len(missing_tds) > 0:
             st.warning(f"⚠️ พบ {len(missing_tds)} กีฬาที่ยังไม่มีค่า Complexity/Physiological/Risk: {missing_tds['Sport'].tolist()}")
 
-        # --- fillna สำหรับ features หลัก (ค่า default = 5) ---
+        # fillna
         for col in ['Intensity', 'Social', 'Budget', 'Flexibility', 'Strength']:
             df[col] = df[col].fillna(5)
-
-        # --- fillna สำหรับ TDS columns (ใช้ค่าสูง = 8 แทน 5 เพื่อความปลอดภัย) ---
-        # ถ้าไม่มีข้อมูล ให้ถือว่ายากและอันตราย (ปลอดภัยกว่าปล่อยผ่าน)
         for col in tds_cols:
             df[col] = df[col].fillna(8)
 
@@ -119,8 +115,6 @@ df = load_data()
 
 st.title("🏆 SportMatch AI Expert")
 st.caption("ระบบวิเคราะห์กีฬาอัจฉริยะ (Professional Adaptive Reasoning)")
-
-# แสดงสถานะข้อมูล
 st.success(f"✅ โหลดข้อมูลสำเร็จ: {len(df)} กีฬา")
 
 col_left, col_right = st.columns([1, 2])
@@ -160,17 +154,17 @@ if run_btn:
     is_newbie    = (experience == "ไม่มีพื้นฐาน (มือใหม่)")
     final_vector = (user_req * 0.7) + (bonus_vector * 0.3) if not is_newbie else user_req
 
-    # --- คำนวณ Cosine Similarity ---
+    # คำนวณ Cosine Similarity
     sim = cosine_similarity([final_vector], df[features].values)
     df['Score'] = sim[0]
 
     processed_df = df.copy()
 
-    # --- ตัดกีฬาเดิมออก (กรณีเปลี่ยนกีฬา) ---
+    # ตัดกีฬาเดิมออก
     if not is_newbie:
         processed_df = processed_df[processed_df['Sport'] != selected_old]
 
-    # --- TDS Filter สำหรับมือใหม่ ---
+    # TDS Filter สำหรับมือใหม่
     if is_newbie:
         processed_df['TDS'] = (
             processed_df['Complexity']    * 0.4 +
@@ -178,24 +172,21 @@ if run_btn:
             processed_df['Risk']          * 0.3
         )
 
-        # แสดงข้อมูล Debug (สามารถลบได้ภายหลัง)
-        with st.expander("🔍 Debug: ดูค่า TDS ของกีฬาที่ถูกกรองออก"):
+        with st.expander("🔍 Debug: กีฬาที่ถูก TDS Filter ตัดออก (TDS ≥ 7)"):
             filtered_out = processed_df[processed_df['TDS'] >= 7][['Sport', 'Complexity', 'Physiological', 'Risk', 'TDS']]
             filtered_out = filtered_out.sort_values('TDS', ascending=False)
             st.dataframe(filtered_out, use_container_width=True)
-            st.caption(f"🚫 กีฬาที่ถูกตัดออก (TDS ≥ 7): {len(filtered_out)} รายการ")
+            st.caption(f"🚫 ถูกตัดออก: {len(filtered_out)} รายการ")
 
-        # กรองออก
         processed_df = processed_df[processed_df['TDS'] < 7]
 
         if len(processed_df) == 0:
             st.error("❌ ไม่พบกีฬาที่เหมาะสมสำหรับมือใหม่ กรุณาปรับเกณฑ์ใหม่")
             st.stop()
 
-    # --- เรียงลำดับและเลือก Top 3 ---
+    # Top 3
     recs = processed_df.sort_values(by='Score', ascending=False).head(3)
 
-    # --- แสดงผลลัพธ์ ---
     st.divider()
     st.subheader("🎯 ผลการวิเคราะห์: กีฬาที่เหมาะกับคุณ")
 
@@ -218,7 +209,7 @@ if run_btn:
                     {reason}
                 </div>""", unsafe_allow_html=True)
 
-                # --- Radar-style Bar Chart ---
+                # Grouped Bar Chart
                 chart_df = pd.DataFrame({
                     'Attributes': ['Cardio', 'Social', 'Budget', 'Flexibility', 'Strength'],
                     'กีฬาแนะนำ': [row['Intensity'], row['Social'], row['Budget'], row['Flexibility'], row['Strength']],
